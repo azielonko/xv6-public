@@ -47,6 +47,7 @@ struct context {
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum schedpolicy { DEFAULT, FCFS, SML, DML };
 
 // Per-process state
 struct proc {
