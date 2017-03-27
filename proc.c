@@ -552,3 +552,18 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int
+set_prio(int priority)
+{
+  switch(priority){
+    case LOW:
+    case MEDIUM:
+    case HIGH:
+      return 0;
+      break;
+    default:
+      return 1;
+      break;
+  }
+}

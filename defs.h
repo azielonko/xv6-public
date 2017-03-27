@@ -185,6 +185,7 @@ void            clearpteu(pde_t *pgdir, char *uva);
 // a4
 int             wait2(int* retime, int* rutime, int* stime);
 int             yield2(void);
+int             set_prio(int priority);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
