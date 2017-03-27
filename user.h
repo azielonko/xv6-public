@@ -40,4 +40,4 @@ int atoi(const char*);
 
 // a4
 int wait2(int* retime, int* rutime, int* stime);
-int yield2(void);
+int yield(void);

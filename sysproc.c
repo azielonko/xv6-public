@@ -102,7 +102,7 @@ sys_wait2(void)
 }
 
 int
-sys_yield2(void)
+sys_yield(void)
 {
   yield();
   return 0;
