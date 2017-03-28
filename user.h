@@ -41,3 +41,6 @@ int atoi(const char*);
 // a4
 int wait2(int* retime, int* rutime, int* stime);
 int yield(void);
+int getstime(void);
+int getretime(void);
+int getrutime(void);
