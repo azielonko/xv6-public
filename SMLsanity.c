@@ -29,12 +29,15 @@ main(int argc, char *argv[])
     prio = pid % NQUEUES;
     set_prio(prio);
     do_work();
-    printf(1, "Process with priority %d exiting.\n", prio);
     exit();
   }
 
   for(; i > 0; i--)
-    wait();
+  {
+    pid = wait();
+    prio = pid % NQUEUES;
+    printf(1, "Process with priority %d exiting.\n", prio);
+  }
 
   exit();
 }
