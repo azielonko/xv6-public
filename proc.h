@@ -48,7 +48,6 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 enum schedpolicy { DEFAULT, FCFS, SML, DML };
-enum priority { LOW, MEDIUM, HIGH, NQUEUES };
 
 // Per-process state
 struct proc {
@@ -69,6 +68,7 @@ struct proc {
   int stime;
   int retime;
   int rutime;
+  enum priority prio;
 };
 
 // Process memory is laid out contiguously, low addresses first:

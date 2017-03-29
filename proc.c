@@ -48,6 +48,7 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
+  p->prio = MEDIUM;
   p->pid = nextpid++;
 
   release(&ptable.lock);
@@ -174,6 +175,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  np->prio = proc->prio;
 
   release(&ptable.lock);
 
@@ -279,7 +281,7 @@ wait(void)
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p, *temp;
 
   for(;;){
     // Enable interrupts on this processor.
@@ -328,23 +330,26 @@ scheduler(void)
         }
         break;
       case SML:
+        temp = 0;
+
         for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
           if(p->state != RUNNABLE)
             continue;
-
-          // Switch to chosen process.  It is the process's job
-          // to release ptable.lock and then reacquire it
-          // before jumping back to us.
-          proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
-          swtch(&cpu->scheduler, p->context);
-          switchkvm();
-
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          proc = 0;
+          if(temp == 0)
+            temp = p;
+          if(p->prio > temp->prio)
+            temp = p;
         }
+
+        if(temp == 0)
+          break;
+
+        proc = temp;
+        switchuvm(temp);
+        temp->state = RUNNING;
+        swtch(&cpu->scheduler, temp->context);
+        switchkvm();
+        proc = 0;        
         break;
       case DML:
         for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -370,11 +375,7 @@ scheduler(void)
         break;
     }
 
-
-
-
     release(&ptable.lock);
-
   }
 }
 
@@ -560,6 +561,7 @@ set_prio(int priority)
     case LOW:
     case MEDIUM:
     case HIGH:
+      proc->prio = priority;
       return 0;
       break;
     default:
