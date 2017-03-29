@@ -107,21 +107,3 @@ sys_yield(void)
   yield();
   return 0;
 }
-
-int
-sys_getstime(void)
-{
-  return proc->stime;
-}
-
-int
-sys_getretime(void)
-{
-  return proc->retime;
-}
-
-int
-sys_getrutime(void)
-{
-  return proc->rutime;
-}

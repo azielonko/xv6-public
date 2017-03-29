@@ -18,6 +18,7 @@ void
 sanity(int n)
 {
   int pid, i, type;
+  int stime, retime, rutime;
   struct totals totalsByType[NUMTYPES];
 
   for (type = 0; type < NUMTYPES; type++)
@@ -50,16 +51,17 @@ sanity(int n)
         break;
     }
 
-    totalsByType[type].stime += getstime();
-    totalsByType[type].retime += getretime();
-    totalsByType[type].rutime += getrutime();
-
     exit();
   }
 
   for (; i > 0; i--)
   {
-    wait();
+    pid = wait2(&stime, &retime, &rutime);
+    type = pid % NUMTYPES;
+
+    totalsByType[type].stime += stime;
+    totalsByType[type].retime += retime;
+    totalsByType[type].rutime += rutime;
   }
 
   for (type = 0; type < NUMTYPES; type++)
