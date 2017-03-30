@@ -62,6 +62,8 @@ sanity(int n)
     totalsByType[type].stime += stime;
     totalsByType[type].retime += retime;
     totalsByType[type].rutime += rutime;
+
+    printf(1, "pid %d completed. type: %d. sleep time: %d. ready time: %d. runtime: %d \n", pid, type, stime, retime, rutime);
   }
 
   for (type = 0; type < NUMTYPES; type++)
