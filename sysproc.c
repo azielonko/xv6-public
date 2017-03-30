@@ -94,11 +94,12 @@ int
 sys_wait2(void)
 {
   int retime, rutime, stime;
+
   argint(0, &retime);
   argint(1, &rutime);
   argint(2, &stime);
-  
-  return 0;
+
+  return wait_with_statistics(&retime, &rutime, &stime);
 }
 
 int
