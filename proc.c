@@ -10,6 +10,10 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+
+  struct proc high[NPROC];
+  struct proc medium[NPROC];
+  struct proc low[NPROC];
 } ptable;
 
 static struct proc *initproc;
@@ -19,6 +23,8 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+void switch_prio_queues(struct proc * p, enum priority prio);
 
 void
 pinit(void)
@@ -48,8 +54,9 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
-  p->prio = MEDIUM;
   p->pid = nextpid++;
+
+  switch_prio_queues(p, MEDIUM);
 
   release(&ptable.lock);
 
@@ -175,7 +182,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  np->prio = proc->prio;
+  switch_prio_queues(np, proc->prio);
 
   release(&ptable.lock);
 
@@ -281,7 +288,8 @@ wait(void)
 void
 scheduler(void)
 {
-  struct proc *p, *temp;
+  struct proc *p;
+  int i, j;
 
   for(;;){
     // Enable interrupts on this processor.
@@ -330,26 +338,36 @@ scheduler(void)
         }
         break;
       case SML:
-        temp = 0;
+        for(i = HIGH; i >= LOW; i--){
+          for(j = 0; j < NPROC; j++){
+            switch(i){
+              case HIGH:
+                p = &ptable.high[j];
+                break;
+              case MEDIUM:
+                p = &ptable.medium[j];
+                break;
+              case LOW:
+                p = &ptable.low[j];
+                break;
+              default:
+                p = &ptable.proc[j];
+                break;
+            }
 
-        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-          if(p->state != RUNNABLE)
-            continue;
-          if(temp == 0)
-            temp = p;
-          if(p->prio > temp->prio)
-            temp = p;
+            if(p->state != RUNNABLE)
+              continue;
+
+            p = &ptable.proc[j];
+            proc = p;
+            switchuvm(p);
+            p->state = RUNNING;
+            swtch(&cpu->scheduler, p->context);
+            switchkvm();
+            proc = 0;
+            break;
+          }
         }
-
-        if(temp == 0)
-          break;
-
-        proc = temp;
-        switchuvm(temp);
-        temp->state = RUNNING;
-        swtch(&cpu->scheduler, temp->context);
-        switchkvm();
-        proc = 0;        
         break;
       case DML:
         for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -557,15 +575,44 @@ procdump(void)
 int
 set_prio(int priority)
 {
+  struct proc *p;
   switch(priority){
     case LOW:
     case MEDIUM:
     case HIGH:
-      proc->prio = priority;
-      return 0;
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+        if(p->pid == proc->pid)
+          switch_prio_queues(p, priority);
       break;
     default:
       return 1;
+  }
+  return 0;
+}
+
+void
+switch_prio_queues(struct proc * p, enum priority prio)
+{
+  int index;
+
+  p->prio = prio;
+  index = p - ptable.proc;
+
+  ptable.low[index].state = UNUSED;
+  ptable.medium[index].state = UNUSED;
+  ptable.high[index].state = UNUSED;
+
+  switch(prio){
+    case LOW:
+      ptable.low[index] = ptable.proc[index];
+      break;
+    case MEDIUM:
+      ptable.medium[index] = ptable.proc[index];
+      break;
+    case HIGH:
+      ptable.high[index] = ptable.proc[index];
+      break;
+    default:
       break;
   }
 }
