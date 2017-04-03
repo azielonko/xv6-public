@@ -95,14 +95,14 @@ sys_wait2(void)
 {
   int *retime, *rutime, *stime;
 
-  if(argptr(0, (char**) &retime, sizeof(int)) == -1)
+  if(argptr(0, (char**) &retime, sizeof retime) < 0)
     return -1;
-  if(argptr(1, (char**) &rutime, sizeof(int)) == -1);
+  if(argptr(1, (char**) &rutime, sizeof rutime) < 0)
     return -1;
-  if(argptr(2, (char**) &stime, sizeof(int)) == -1);
+  if(argptr(2, (char**) &stime, sizeof stime) < 0)
     return -1;
 
-  return wait_with_statistics(retime, rutime, stime);
+  return wait2(retime, rutime, stime);
 }
 
 int
