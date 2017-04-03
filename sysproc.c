@@ -93,13 +93,13 @@ sys_uptime(void)
 int
 sys_wait2(void)
 {
-  int retime, rutime, stime;
+  int *retime, *rutime, *stime;
 
-  argint(0, &retime);
-  argint(1, &rutime);
-  argint(2, &stime);
+  argptr(0, (char**) &retime, sizeof(int));
+  argptr(1, (char**) &rutime, sizeof(int));
+  argptr(2, (char**) &stime, sizeof(int));
 
-  return wait_with_statistics(&retime, &rutime, &stime);
+  return wait_with_statistics(retime, rutime, stime);
 }
 
 int
