@@ -269,7 +269,7 @@ wait(void)
 }
 
 //a copy of wait(), but populates the arguments
-int wait_with_statistics(int* retime, int* rutime, int* stime)
+int wait2(int* retime, int* rutime, int* stime)
 {
   struct proc *p;
   int havekids, pid;
