@@ -28,9 +28,9 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
-  memset(ptable.high, 0, NPROC);
-  memset(ptable.medium, 0, NPROC);
-  memset(ptable.low, 0, NPROC);
+  memset(&ptable.high, 0, sizeof ptable.high);
+  memset(&ptable.medium, 0, sizeof ptable.medium);
+  memset(&ptable.low, 0, sizeof ptable.low);
 }
 
 //PAGEBREAK: 32
@@ -58,7 +58,7 @@ found:
   p->pid = nextpid++;
 
   p->prio = MEDIUM;
-  switch_prio_queues(p->pid, MEDIUM);
+  ptable.medium[p - ptable.proc] = 1;
 
   release(&ptable.lock);
 
@@ -557,11 +557,10 @@ set_prio(int priority)
       proc->prio = priority;
       switch_prio_queues(proc->pid, priority);
       release(&ptable.lock);
-      break;
+      return 0;
     default:
       return 1;
   }
-  return 0;
 }
 
 void
@@ -570,7 +569,7 @@ switch_prio_queues(int pid, enum priority prio)
   int index;
 
   for(index = 0; index < NPROC; index++)
-    if(ptable.proc[index].pid == proc->pid)
+    if(ptable.proc[index].pid == pid)
       break;
 
   ptable.low[index] = 0;
