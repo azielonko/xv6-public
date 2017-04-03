@@ -95,9 +95,12 @@ sys_wait2(void)
 {
   int *retime, *rutime, *stime;
 
-  argptr(0, (char**) &retime, sizeof(int));
-  argptr(1, (char**) &rutime, sizeof(int));
-  argptr(2, (char**) &stime, sizeof(int));
+  if(argptr(0, (char**) &retime, sizeof(int)) == -1)
+    return -1;
+  if(argptr(1, (char**) &rutime, sizeof(int)) == -1);
+    return -1;
+  if(argptr(2, (char**) &stime, sizeof(int)) == -1);
+    return -1;
 
   return wait_with_statistics(retime, rutime, stime);
 }
