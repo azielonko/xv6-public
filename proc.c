@@ -49,6 +49,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->ctime = ticks;
 
   release(&ptable.lock);
 
@@ -344,6 +345,28 @@ scheduler(void)
           proc = p;
           switchuvm(p);
           p->state = RUNNING;
+          
+          //increment timing statistics. may need to be changed or moved once QUOTA comes into play
+          struct proc *pr;
+          for(pr = ptable.proc; pr < &ptable.proc[NPROC]; pr++)
+          {
+            switch (pr->state)
+            {
+              case RUNNING:
+                pr->rutime++;
+                break;
+              case SLEEPING:
+                pr->stime++;
+                break;
+              case RUNNABLE:
+                pr->retime++;
+                break;
+              default:
+                //embryo, unused, and zombie states don't affect stats
+                break;
+            }
+          }
+          
           swtch(&cpu->scheduler, p->context);
           switchkvm();
 
