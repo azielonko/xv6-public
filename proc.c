@@ -10,6 +10,10 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+
+  int high[NPROC];
+  int medium[NPROC];
+  int low[NPROC];
 } ptable;
 
 static struct proc *initproc;
@@ -24,6 +28,9 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  memset(&ptable.high, 0, sizeof ptable.high);
+  memset(&ptable.medium, 0, sizeof ptable.medium);
+  memset(&ptable.low, 0, sizeof ptable.low);
 }
 
 //PAGEBREAK: 32
@@ -50,6 +57,9 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->ctime = ticks;
+
+  p->prio = MEDIUM;
+  ptable.medium[p - ptable.proc] = 1;
 
   release(&ptable.lock);
 
@@ -175,6 +185,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  switch_prio_queues(np, proc->prio);
 
   release(&ptable.lock);
 
@@ -324,7 +335,10 @@ int wait2(int* retime, int* rutime, int* stime)
 void
 scheduler(void)
 {
+  struct proc *curr;
   struct proc *p;
+  uint prev_ticks, delta_ticks;
+  int i, j;
 
   for(;;){
     // Enable interrupts on this processor.
@@ -333,115 +347,118 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
+    p = 0;
+
     switch(SCHEDFLAG) {
       case DEFAULT:
         for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
           if(p->state != RUNNABLE)
             continue;
-
-          // Switch to chosen process.  It is the process's job
-          // to release ptable.lock and then reacquire it
-          // before jumping back to us.
-          proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
-          
-          //increment timing statistics. may need to be changed or moved once QUOTA comes into play
-          struct proc *pr;
-          for(pr = ptable.proc; pr < &ptable.proc[NPROC]; pr++)
-          {
-            switch (pr->state)
-            {
-              case RUNNING:
-                pr->rutime++;
-                break;
-              case SLEEPING:
-                pr->stime++;
-                break;
-              case RUNNABLE:
-                pr->retime++;
-                break;
-              default:
-                //embryo, unused, and zombie states don't affect stats
-                break;
-            }
-          }
-          
-          swtch(&cpu->scheduler, p->context);
-          switchkvm();
-
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          proc = 0;
+          break;
         }
         break;
       case FCFS:
-        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-          if(p->state != RUNNABLE)
-            continue;
 
-          // Switch to chosen process.  It is the process's job
-          // to release ptable.lock and then reacquire it
-          // before jumping back to us.
-          proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
-          swtch(&cpu->scheduler, p->context);
-          switchkvm();
+        curr = 0;
 
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          proc = 0;
+        for(curr = ptable.proc; curr < &ptable.proc[NPROC]; curr++)
+        {
+          if(curr->state == RUNNABLE)
+          {
+            //set chosen=p if chosen hasn't been set, or if p has an earlier creation time
+            if (p)
+            {
+              if (curr->ctime < p->ctime)
+              {
+                p = curr;
+              }
+            }
+            else
+            {
+              p = curr;
+            }
+          }
         }
+
         break;
       case SML:
-        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-          if(p->state != RUNNABLE)
-            continue;
-
-          // Switch to chosen process.  It is the process's job
-          // to release ptable.lock and then reacquire it
-          // before jumping back to us.
-          proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
-          swtch(&cpu->scheduler, p->context);
-          switchkvm();
-
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          proc = 0;
-        }
-        break;
       case DML:
-        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-          if(p->state != RUNNABLE)
-            continue;
+        for(i = HIGH; i >= LOW; i--){
+          for(j = 0; j < NPROC; j++){
+            switch(i){
+              case HIGH:
+                if(ptable.high[j])
+                  p = &ptable.proc[j];
+                break;
+              case MEDIUM:
+                if(ptable.medium[j])
+                  p = &ptable.proc[j];
+                break;
+              case LOW:
+                if(ptable.low[j])
+                  p = &ptable.proc[j];
+                break;
+              default:
+                panic("scheduler: Invalid priority");
+            }
 
-          // Switch to chosen process.  It is the process's job
-          // to release ptable.lock and then reacquire it
-          // before jumping back to us.
-          proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
-          swtch(&cpu->scheduler, p->context);
-          switchkvm();
+            if(!p || p->state != RUNNABLE)
+              continue;
+            break;
+          }
 
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          proc = 0;
+          if(p && p->state == RUNNABLE)
+            break;
         }
         break;
       default:
         panic("SCHEDFLAG is not set to a valid option");
-        break;
     }
 
+    if(p && p->state == RUNNABLE) {
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      prev_ticks = ticks;
+      swtch(&cpu->scheduler, p->context);
+      delta_ticks = prev_ticks - ticks;
+      switchkvm();
 
+      if(SCHEDFLAG == DML && delta_ticks == QUANTA){
+        if(proc->prio != LOW) proc->prio--;
+        switch_prio_queues(proc, proc->prio);
+      }
 
+      //increment timing statistics. may need to be changed or moved once QUOTA comes into play
+      struct proc *pr;
+      for(pr = ptable.proc; pr < &ptable.proc[NPROC]; pr++)
+      {
+        switch (pr->state)
+        {
+          case RUNNING:
+            pr->rutime++;
+            break;
+          case SLEEPING:
+            pr->stime++;
+            break;
+          case RUNNABLE:
+            pr->retime++;
+            break;
+          default:
+            //embryo, unused, and zombie states don't affect stats
+            break;
+        }
+      }
+      
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      proc = 0;
+    }
 
     release(&ptable.lock);
-
   }
 }
 
@@ -475,6 +492,10 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
+
+  if(SCHEDFLAG == DML)
+    switch_prio_queues(proc, proc->prio);
+
   proc->state = RUNNABLE;
   sched();
   release(&ptable.lock);
@@ -530,6 +551,9 @@ sleep(void *chan, struct spinlock *lk)
 
   // Tidy up.
   proc->chan = 0;
+
+  if(SCHEDFLAG == DML)
+    switch_prio_queues(proc, HIGH);
 
   // Reacquire original lock.
   if(lk != &ptable.lock){  //DOC: sleeplock2
@@ -617,5 +641,60 @@ procdump(void)
         cprintf(" %p", pc[i]);
     }
     cprintf("\n");
+  }
+}
+
+int
+set_prio(int priority)
+{
+  switch(priority){
+    case LOW:
+    case MEDIUM:
+    case HIGH:
+      switch_prio_queues_with_lock(proc, priority);
+      return 0;
+    default:
+      return 1;
+  }
+}
+
+void
+switch_prio_queues_with_lock(struct proc *p, enum priority prio)
+{
+  acquire(&ptable.lock);  
+  switch_prio_queues(p, prio);
+  release(&ptable.lock);
+}
+
+void
+switch_prio_queues(struct proc *p, enum priority prio)
+{
+  int index;
+
+  for(index = 0; index < NPROC; index++)
+    if(ptable.proc[index].pid == p->pid)
+      break;
+
+  if(index >= NPROC)
+    panic("switch_prio_queues: proc not found!");
+
+  p->prio = prio;
+
+  ptable.low[index] = 0;
+  ptable.medium[index] = 0;
+  ptable.high[index] = 0;
+
+  switch(prio){
+    case LOW:
+      ptable.low[index] = 1;
+      break;
+    case MEDIUM:
+      ptable.medium[index] = 1;
+      break;
+    case HIGH:
+      ptable.high[index] = 1;
+      break;
+    default:
+      panic("switch_prio_queues: Invalid priority");
   }
 }

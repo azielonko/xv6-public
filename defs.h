@@ -185,6 +185,9 @@ void            clearpteu(pde_t *pgdir, char *uva);
 
 // a4
 int             wait2(int* retime, int* rutime, int* stime);
+int             set_prio(int priority);
+void            switch_prio_queues_with_lock(struct proc *p, enum priority prio);
+void            switch_prio_queues(struct proc *p, enum priority prio);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

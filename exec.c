@@ -97,6 +97,10 @@ exec(char *path, char **argv)
   proc->sz = sz;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
+
+  if(SCHEDFLAG == DML)
+    switch_prio_queues_with_lock(proc, MEDIUM);
+
   switchuvm(proc);
   freevm(oldpgdir);
   return 0;
