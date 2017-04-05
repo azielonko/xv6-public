@@ -184,8 +184,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  np->prio = proc->prio;
-  switch_prio_queues(np->pid, proc->prio);
+  switch_prio_queues(np, proc->prio);
 
   release(&ptable.lock);
 
@@ -401,6 +400,10 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
+
+  if(SCHEDFLAG == DML)
+    switch_prio_queues(proc, proc->prio);
+
   proc->state = RUNNABLE;
   sched();
   release(&ptable.lock);
@@ -456,6 +459,9 @@ sleep(void *chan, struct spinlock *lk)
 
   // Tidy up.
   proc->chan = 0;
+
+  if(SCHEDFLAG == DML)
+    switch_prio_queues(proc, HIGH);
 
   // Reacquire original lock.
   if(lk != &ptable.lock){  //DOC: sleeplock2
@@ -553,10 +559,7 @@ set_prio(int priority)
     case LOW:
     case MEDIUM:
     case HIGH:
-      acquire(&ptable.lock);
-      proc->prio = priority;
-      switch_prio_queues(proc->pid, priority);
-      release(&ptable.lock);
+      switch_prio_queues_with_lock(proc, priority);
       return 0;
     default:
       return 1;
@@ -564,13 +567,26 @@ set_prio(int priority)
 }
 
 void
-switch_prio_queues(int pid, enum priority prio)
+switch_prio_queues_with_lock(struct proc *p, enum priority prio)
+{
+  acquire(&ptable.lock);  
+  switch_prio_queues(p, prio);
+  release(&ptable.lock);
+}
+
+void
+switch_prio_queues(struct proc *p, enum priority prio)
 {
   int index;
 
   for(index = 0; index < NPROC; index++)
-    if(ptable.proc[index].pid == pid)
+    if(ptable.proc[index].pid == p->pid)
       break;
+
+  if(index >= NPROC)
+    panic("switch_prio_queues: proc not found!");
+
+  p->prio = prio;
 
   ptable.low[index] = 0;
   ptable.medium[index] = 0;
