@@ -336,6 +336,7 @@ scheduler(void)
 {
   struct proc *curr;
   struct proc *p;
+  uint prev_ticks, delta_ticks;
   int i, j;
 
   for(;;){
@@ -420,8 +421,15 @@ scheduler(void)
       proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      prev_ticks = ticks;
       swtch(&cpu->scheduler, p->context);
+      delta_ticks = prev_ticks - ticks;
       switchkvm();
+
+      if(SCHEDFLAG == DML && delta_ticks == QUANTA){
+        if(proc->prio != LOW) proc->prio--;
+        switch_prio_queues(proc, proc->prio);
+      }
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
