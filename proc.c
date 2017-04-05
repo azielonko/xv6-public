@@ -334,6 +334,7 @@ int wait2(int* retime, int* rutime, int* stime)
 void
 scheduler(void)
 {
+  struct proc *curr;
   struct proc *p;
   int i, j;
 
@@ -355,11 +356,28 @@ scheduler(void)
         }
         break;
       case FCFS:
-        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-          if(p->state != RUNNABLE)
-            continue;
-          break;
+
+        curr = 0;
+
+        for(curr = ptable.proc; curr < &ptable.proc[NPROC]; curr++)
+        {
+          if(curr->state == RUNNABLE)
+          {
+            //set chosen=p if chosen hasn't been set, or if p has an earlier creation time
+            if (p)
+            {
+              if (curr->ctime < p->ctime)
+              {
+                p = curr;
+              }
+            }
+            else
+            {
+              p = curr;
+            }
+          }
         }
+
         break;
       case SML:
       case DML:
