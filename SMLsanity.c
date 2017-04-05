@@ -10,8 +10,8 @@ do_work()
   int i, j;
 
   for (i = 0; i < 100; i++)
-    for (j = 0; j < 1000000; j++)
-      ;
+    for (j = 0; j < 1000; j++)
+      yield();
 }
 
 int
@@ -28,6 +28,7 @@ main(int argc, char *argv[])
     pid = getpid();
     prio = pid % NPRIORITIES;
     set_prio(prio);
+    sleep(100);
     do_work();
     exit();
   }
