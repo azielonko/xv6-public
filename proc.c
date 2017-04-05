@@ -56,6 +56,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->ctime = ticks;
 
   p->prio = MEDIUM;
   ptable.medium[p - ptable.proc] = 1;
@@ -423,7 +424,7 @@ scheduler(void)
       p->state = RUNNING;
       prev_ticks = ticks;
       swtch(&cpu->scheduler, p->context);
-      delta_ticks = prev_ticks - ticks;
+      delta_ticks = ticks - prev_ticks;
       switchkvm();
 
       if(SCHEDFLAG == DML && delta_ticks == QUANTA){
@@ -431,6 +432,27 @@ scheduler(void)
         switch_prio_queues(proc, proc->prio);
       }
 
+      //increment timing statistics. may need to be changed or moved once QUOTA comes into play
+      struct proc *pr;
+      for(pr = ptable.proc; pr < &ptable.proc[NPROC]; pr++)
+      {
+        switch (pr->state)
+        {
+          case RUNNING:
+            pr->rutime += delta_ticks;
+            break;
+          case SLEEPING:
+            pr->stime += delta_ticks;
+            break;
+          case RUNNABLE:
+            pr->retime += delta_ticks;
+            break;
+          default:
+            //embryo, unused, and zombie states don't affect stats
+            break;
+        }
+      }
+      
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       proc = 0;
