@@ -361,7 +361,7 @@ scheduler(void)
 
         for(curr = ptable.proc; curr < &ptable.proc[NPROC]; curr++)
         {
-          if(curr->state != RUNNABLE)
+          if(curr->state == RUNNABLE)
           {
             //set chosen=p if chosen hasn't been set, or if p has an earlier creation time
             if (p)
