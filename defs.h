@@ -114,6 +114,7 @@ void            sched(void);
 void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(void);
+int             wait_with_statistics(int* retime, int* rutime, int* stime);
 void            wakeup(void*);
 void            yield(void);
 
@@ -184,7 +185,6 @@ void            clearpteu(pde_t *pgdir, char *uva);
 
 // a4
 int             wait2(int* retime, int* rutime, int* stime);
-int             yield2(void);
 int             set_prio(int priority);
 void            switch_prio_queues_with_lock(struct proc *p, enum priority prio);
 void            switch_prio_queues(struct proc *p, enum priority prio);

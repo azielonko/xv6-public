@@ -93,16 +93,20 @@ sys_uptime(void)
 int
 sys_wait2(void)
 {
-  int retime, rutime, stime;
-  argint(0, &retime);
-  argint(1, &rutime);
-  argint(2, &stime);
-  
-  return 0;
+  int *retime, *rutime, *stime;
+
+  if(argptr(0, (char**) &retime, sizeof retime) < 0)
+    return -1;
+  if(argptr(1, (char**) &rutime, sizeof rutime) < 0)
+    return -1;
+  if(argptr(2, (char**) &stime, sizeof stime) < 0)
+    return -1;
+
+  return wait2(retime, rutime, stime);
 }
 
 int
-sys_yield2(void)
+sys_yield(void)
 {
   yield();
   return 0;
