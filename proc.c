@@ -424,7 +424,7 @@ scheduler(void)
       p->state = RUNNING;
       prev_ticks = ticks;
       swtch(&cpu->scheduler, p->context);
-      delta_ticks = prev_ticks - ticks;
+      delta_ticks = ticks - prev_ticks;
       switchkvm();
 
       if(SCHEDFLAG == DML && delta_ticks == QUANTA){
@@ -439,13 +439,13 @@ scheduler(void)
         switch (pr->state)
         {
           case RUNNING:
-            pr->rutime++;
+            pr->rutime += (delta_ticks / QUANTA);
             break;
           case SLEEPING:
-            pr->stime++;
+            pr->stime += (delta_ticks / QUANTA);
             break;
           case RUNNABLE:
-            pr->retime++;
+            pr->retime += (delta_ticks / QUANTA);
             break;
           default:
             //embryo, unused, and zombie states don't affect stats
