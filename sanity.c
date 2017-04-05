@@ -90,7 +90,7 @@ sanity(int n)
 void
 run_cpu_bound_process()
 {
-  int i, j;
+  volatile int i, j;
   for (i = 0; i < 100; i++)
     for (j = 0; j < 1000000; j++)
       ;
@@ -99,7 +99,7 @@ run_cpu_bound_process()
 void
 run_light_cpu_bound_process()
 {
-  int i, j;
+  volatile int i, j;
   for (i = 0; i < 100; i++)
   {
     for (j = 0; j < 1000000; j++)
