@@ -439,13 +439,13 @@ scheduler(void)
         switch (pr->state)
         {
           case RUNNING:
-            pr->rutime += (delta_ticks / QUANTA);
+            pr->rutime += delta_ticks;
             break;
           case SLEEPING:
-            pr->stime += (delta_ticks / QUANTA);
+            pr->stime += delta_ticks;
             break;
           case RUNNABLE:
-            pr->retime += (delta_ticks / QUANTA);
+            pr->retime += delta_ticks;
             break;
           default:
             //embryo, unused, and zombie states don't affect stats
