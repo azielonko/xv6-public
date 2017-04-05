@@ -181,6 +181,7 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+	_SMLsanity\
 	_sanity\
 
 fs.img: mkfs README $(UPROGS)
